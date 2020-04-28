@@ -1,10 +1,103 @@
 import React from 'react';
 
 class App extends React.Component{
+    constructor(props) {
+        super(props);
+        console.log("constructor called");
+        console.log(this)
+        this.state = {
+            games: [],
+            idx: 0,
+            gamesPlayed: 0,
+            gamesWon: 0
+        };
+        this.createNewGame = this.createNewGame.bind(this);
+        this.handleGameUpdate = this.handleGameUpdate.bind(this);
+    }
+
+    createNewGame(){
+        console.log("Creating New Game!");
+        // let game = <li key={this.state.idx}><Game handleGameUpdate ={this.state.handleGameUpdate} key={this.state.idx}/></li>;
+        let games = this.state.games;
+        games.push(<li key={this.state.idx}><Game handleGameUpdate = {this.handleGameUpdate} key={this.state.idx}/></li>);
+
+        this.setState((state, props) => {
+            console.log(this);
+            console.log("setting state called!");
+            return{
+              games : games,
+                idx : state.idx + 1
+            };
+        });
+    }
+
+
+    handleGameUpdate(e) {
+        console.log("handle called");
+        console.log(e)
+        console.log(this)
+        if (e.type === "play") {
+            console.log("win");
+            this.setState((state, props) => {
+                return {
+                    gamesPlayed: state.gamesPlayed + 1
+                }
+            });
+            if (e.playerWon) {
+                this.setState((state, props) => {
+                    return {
+                        gamesWon: state.gamesWon + 1
+                    }
+                });
+            }
+        } else {
+            let gamesWon = this.state.gamesWon,
+                games = this.state.games;
+            if (e.type === "delete") {
+                // remove the item at index
+                if (games.length > 0) {
+                    // remove one item at the index
+                    games.splice(e.index, 1);
+                }
+            }
+
+            if (e.playerWon) {
+                gamesWon--;
+            }
+            console.log(gamesWon);
+            console.log(games);
+            this.setState((state) => {
+                return {
+                    gamesPlayed: state.gamesPlayed - 1,
+                    gamesWon: gamesWon,
+                    games: games
+                }
+            });
+        }
+    }
+
     render() {
+        console.log("Render app");
         return <div>
             <h1>Rock, Paper, Scissors, Lizard, Spock with React</h1>
-            <Game/>
+            <Stats gamesPlayed ={this.state.gamesPlayed} gamesWon = {this.state.gamesWon} />
+            <ul>
+                {this.state.games}
+            </ul>
+            <button onClick={this.createNewGame}> New Game </button>
+        </div>;
+    }
+}
+
+class Stats extends React.Component{
+    render(){
+        console.log("redner stats called");
+        console.log(this);
+        let rate = this.props.gamesPlayed ? this.props.gamesWon / this.props.gamesPlayed : 0;
+        return <div>
+            <span> Games Played: {this.props.gamesPlayed} |
+                   Games Won: {this.props.gamesWon} |
+                   Win Rate: {(rate * 100).toFixed(2)}% </span>
         </div>;
     }
 }
@@ -25,6 +118,8 @@ class Game extends React.Component {
         this.spock = this.spock.bind(this);
         this.playGame = this.playGame.bind(this);
         this.reset = this.reset.bind(this);
+        this.notifyParentOfPlay = this.notifyParentOfPlay.bind(this);
+        this.notifyParentOfDelete = this.notifyParentOfDelete.bind(this);
     }
 
     playGame(playerMove){
@@ -36,8 +131,33 @@ class Game extends React.Component {
                 status: status,
                 playerMove: playerMove,
                 opponentMove: opponentMove
-            });
+            }, this.notifyParentOfPlay);
         }
+    }
+
+    notifyParentOfPlay(){
+        let playerWon = this.state.status == true;
+        this.props.handleGameUpdate({
+            type: "play",
+            playerWon: playerWon
+        });
+    }
+
+    notifyParentOfDelete(){
+        let playerWon = this.state.status == true;
+        this.props.handleGameUpdate({
+            type: "delete",
+            playerWon: playerWon,
+            index: this.props.idx
+        });
+    }
+
+    notifyParentOfReset(){
+        let playerWon = this.state.status == true;
+        this.props.handleGameUpdate({
+            type: "reset",
+            playerWon: playerWon
+        });
     }
 
     rock() {
@@ -69,7 +189,7 @@ class Game extends React.Component {
         console.log("Resetting Game!");
         this.setState({
             played: false
-        });
+        }, this.notifyParentOfReset);
     }
 
     render() {
@@ -92,6 +212,7 @@ class Game extends React.Component {
                 <span> Player's Choice: {pl}</span><br/>
                 <span> Opponent's Choice: {op}</span><br/>
                 {resetBtn}
+                <button onClick={this.notifyParentOfDelete}> Delete </button>
             </div>
         </div>;
     }
